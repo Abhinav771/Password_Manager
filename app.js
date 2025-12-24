@@ -194,6 +194,41 @@ app.get("/get-passwords", async function(req, res) {
     }
 });
 
+app.post("/delete-password", async function(req, res) {
+   
+    const token = req.cookies.token;
+    if (!token) return res.status(401).json({ message: "No session found." });
+
+    let userId;
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        userId = decoded.id;
+    } catch (err) {
+        return res.status(401).json({ message: "Invalid Token" });
+    }
+
+    
+    const { id } = req.body; 
+
+    try {
+       
+        const result = await passwordModel.findOneAndDelete({ 
+            _id: id, 
+            userId: userId 
+        });
+
+        if (result) {
+            res.json({ message: "Password deleted successfully" });
+        } else {
+            res.status(404).json({ message: "Password not found or not authorized" });
+        }
+
+    } catch (err) {
+        console.log(err);
+        res.status(500).json({ message: "Error deleting password" });
+    }
+});
+
 app.get("/logout", (req, res) => {
     res.clearCookie("token");
     res.redirect("/");

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Vault - Password Manager</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f9; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { text-align: center; }
+        
+        /* Form Styles */
+        .input-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        input { padding: 10px; flex: 1; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; background: #28a745; color: white; border: none; cursor: pointer; border-radius: 4px; }
+        button:hover { background: #218838; }
+
+        /* Table Styles */
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { padding: 12px; border-bottom: 1px solid #ddd; text-align: left; }
+        th { background-color: #f8f9fa; }
+        .logout-btn { background: #dc3545; float: right; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <button class="logout-btn" onclick="logout()">Logout</button>
+    <h1>My Password Vault</h1>
+
+    <div class="input-group">
+        <input type="text" id="site" placeholder="Website (e.g. Facebook)">
+        <input type="text" id="username" placeholder="Username">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="addPassword()">Save</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Website</th>
+                <th>Username</th>
+                <th>Password</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="password-list">
+            </tbody>
+    </table>
+</div>
+
+<script>
+    const BACKEND_URL = 'http://localhost:3000';
+
+    // 1. Load Passwords on Page Start
+    window.onload = function() {
+        fetchPasswords();
+    };
+
+    // 2. Fetch Passwords (GET)
+    async function fetchPasswords() {
+        // The cookie is sent AUTOMATICALLY with this request
+        const response = await fetch(`${BACKEND_URL}/get-passwords`);
+        
+        if (response.status === 401) {
+            alert("Session expired. Please login again.");
+            window.location.href = "/";
+            return;
+        }
+
+        const data = await response.json();
+        const list = document.getElementById('password-list');
+        list.innerHTML = '';
+
+        data.forEach(item => {
+            list.innerHTML += `
+                <tr>
+                    <td>${item.website}</td>
+                    <td>${item.username}</td>
+                    <td>${item.password}</td> <td><button style="background:red" onclick="deletePass('${item._id}')">X</button></td>
+                </tr>
+            `;
+        });
+    }
+
+    // 3. Add Password (POST)
+    async function addPassword() {
+        const site = document.getElementById('site').value;
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        await fetch(`${BACKEND_URL}/add-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ website: site, username, password })
+        });
+
+        // Clear inputs and reload list
+        document.getElementById('site').value = '';
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        fetchPasswords();
+    }
+
+    // 4. Logout
+    function logout() {
+        fetch(`${BACKEND_URL}/logout`).then(() => {
+            window.location.href = "/";
+        });
+    }
+</script>
+
+</body>
+</html>
